@@ -26,11 +26,16 @@ class AuctionLiveHandler
         $auction_live->save();
     }
 
+    public static function getLastAuctionDate(){
+        $auction = AuctionLive::orderBy('date', 'desc')->first();
+
+        return $auction->date;
+    }
+
     public function storeAuctionLiveBatch($data){
         foreach(array_chunk($data, 2000) as $small_batch){
             AuctionLive::insert($small_batch);
         }
-
     }
 
     public function prepareAuctionData($data){
