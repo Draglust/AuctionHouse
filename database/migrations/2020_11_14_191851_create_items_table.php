@@ -26,7 +26,7 @@ class CreateItemsTable extends Migration
             $table->string('item_subclass');
             $table->integer('item_subclass_id')->unsigned();
             $table->string('inventory_type');
-            $table->string('image');
+            $table->string('image')->default('none');
         });
     }
 

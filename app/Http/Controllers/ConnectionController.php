@@ -12,9 +12,6 @@ use Exception as GlobalException;
 
 class ConnectionController extends Controller
 {
-    public $ClientID = '14bad3ddde5e455d84d778ae945c6eca';
-    public $requestSecret = 'WKr9xUFvzIQ9ZSJ134WEjMQSZI8nFwuF';
-    public $token = false;
     public $selectedRealm = '';
 
 
@@ -38,45 +35,40 @@ class ConnectionController extends Controller
 
     public function getConnectedRealmApiData()
     {
-        if(!$this->token){
-            $this->getCredentials();
-        }
         $endpoint_handler = new EndpointHandler;
-        $data = $endpoint_handler->connectedRealmApiCurl($this->token);
+        $data = $endpoint_handler->connectedRealmApiCurl();
         if(empty($data)){
-            $this->refreshToken();
-            $data = $endpoint_handler->connectedRealmApiCurl($this->token);
+            $endpoint_handler->refreshToken();
+            $data = $endpoint_handler->connectedRealmApiCurl();
         }
         return $data;
     }
 
-    public function getConnectedRealmApiName(){
+    public function getAndSaveConnectedRealmApiName(){
         $endpoint_handler = new EndpointHandler;
         $realm_handler = new RealmHandler;
-        if(!$this->token){
-            $this->getCredentials();
-        }
+
         $all_realms = RealmHandler::getAllRealms();
         foreach($all_realms as $key => $realm){
-            $data = $endpoint_handler->genericBlizzardConnection($this->token, $realm->url);
+            $data = $endpoint_handler->genericBlizzardConnection( $realm->url);
             if(empty($data['body'])){
-                $this->refreshToken();
-                $data = $endpoint_handler->genericBlizzardConnection($this->token, $realm->url);
+                $endpoint_handler->refreshToken();
+                $data = $endpoint_handler->genericBlizzardConnection($realm->url);
             }
             $realm_concatenated_slug = $realm_handler->getConcatenatedRealmsName($data['body']);
             $realm_handler->saveRealmName($realm->blizzard_id, $realm_concatenated_slug);
         }
     }
 
-    public function getConnectedRealmAuctionHouseApiData(){
+    public function getAndSaveConnectedRealmAuctionHouseApiData(){
         $url = 'https://eu.api.blizzard.com/data/wow/connected-realm/'.$this->selectedRealm.'/auctions?namespace=dynamic-eu';
 
         $endpoint_handler = new EndpointHandler;
         $auctionlive_handler = new AuctionLiveHandler;
-        $data = $endpoint_handler->genericBlizzardConnection($this->token, $url);
+        $data = $endpoint_handler->genericBlizzardConnection($url);
         if(empty($data['body'])){
-            $this->refreshToken();
-            $data = $endpoint_handler->genericBlizzardConnection($this->token, $url);
+            $endpoint_handler->refreshToken();
+            $data = $endpoint_handler->genericBlizzardConnection($url);
         }
         $auction_last_change_date = $auctionlive_handler->getLastChangeDate($data['header']);
 
@@ -89,29 +81,20 @@ class ConnectionController extends Controller
         $auctionlive_handler->storeAuctionLiveBatch($auctions_array);
         unset($auctions_array);
         echo 'Fin';
-        return false;
+        return true;
     }
 
-    public function getCredentials()
-    {
-        $token = TokenHandler::getActiveTokenValueFromDB();
-        if($token == null || $token == false){
-            $token_handler = new TokenHandler;
-            $response = $token_handler->tokenJsonRetrieval($this->ClientID, $this->requestSecret);
-            $token_handler->storeToken($response);
-            $token = $token_handler->tokenExtraction($response);
+    public function getItemApiData($item_id){
+        $url = 'https://eu.api.blizzard.com/data/wow/connected-realm/'.$this->selectedRealm.'/auctions?namespace=dynamic-eu';
+
+        $endpoint_handler = new EndpointHandler;
+        $data = $endpoint_handler->itemApiCurl($item_id);
+        if(empty($data)){
+            $endpoint_handler->refreshToken();
+            $data = $endpoint_handler->itemApiCurl($item_id);
         }
-        $this->token = $token;
 
-        return $this->token;
-
+        return $data;
     }
-
-    public function refreshToken()
-    {
-        TokenHandler::deactivateTokens();
-        $this->getCredentials();
-    }
-
 
 }

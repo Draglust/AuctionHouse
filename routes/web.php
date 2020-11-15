@@ -19,5 +19,5 @@ Route::get('/', function () {
 
 Route::get('/request', 'ConnectionController@getCredentials');
 Route::get('/realmapidata', 'ConnectionController@saveConnectedRealmApiData'); //Carga de las url de los reinos
-Route::get('/realmapinames', 'ConnectionController@getConnectedRealmApiName'); //Carga de los nombres de los reinos en base a las url previas
-Route::get('/auctionhouse', 'ConnectionController@getConnectedRealmAuctionHouseApiData'); //Carga de todas las subastas "live"
+Route::get('/realmapinames', 'ConnectionController@getAndSaveConnectedRealmApiName'); //Carga de los nombres de los reinos en base a las url previas
+Route::get('/auctionhouse', 'ConnectionController@getAndSaveConnectedRealmAuctionHouseApiData'); //Carga de todas las subastas "live"
