@@ -96,11 +96,16 @@ class ConnectionController extends Controller
         $item_handler = new ItemHandler;
         $items_id = ItemHandler::getItemsIdFromAuctionsNotInsideItems();
         foreach($items_id as $item_id){
-            set_time_limit(20);
+            set_time_limit(40);
             if($item_id->item_id == 87450 || $item_id->item_id == 15347 || $item_id->item_id == 55413 || $item_id->item_id == 116567 || $item_id->item_id == 6591 || $item_id->item_id == 38781){
                 echo 'entra '.$item_id->item_id;
             }
             $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);
+            if(isset(json_decode($item_data)->code) && json_decode($item_data)->code == 404){
+                $item_handler->deleteItemAndRelatedAuction($item_id->item_id);
+                unset($item_data);
+                continue;
+            }
             if(empty($item_data)){
                 $endpoint_handler->refreshToken();
                 $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);

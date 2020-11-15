@@ -14,6 +14,11 @@ class ItemHandler
         return $items_id_in_auctions;
     }
 
+    public function deleteItemAndRelatedAuction($item_id){
+        Item::where('id', '=', $item_id)->delete();
+        Auctionlive::where('item_id', '=', $item_id)->delete();
+    }
+
     public function saveItemData($data){
         try{
             $item_already_inserted = Item::where('id', '=', $data->id)->get();
