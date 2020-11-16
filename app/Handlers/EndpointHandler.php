@@ -9,6 +9,8 @@ class EndpointHandler
 {
     public $ClientID = '14bad3ddde5e455d84d778ae945c6eca';
     public $requestSecret = 'WKr9xUFvzIQ9ZSJ134WEjMQSZI8nFwuF';
+    public $itemApiUrl = 'https://eu.api.blizzard.com/data/wow/item/';
+    public $connectedRealmApiurl = 'https://eu.api.blizzard.com/data/wow/connected-realm/index';
     public $token = false;
 
     public function __construct()
@@ -40,7 +42,7 @@ class EndpointHandler
 
     public function connectedRealmApiCurl()
     {
-        $redirect_uri = 'https://eu.api.blizzard.com/data/wow/connected-realm/index';
+        $redirect_uri = $this->connectedRealmApiUrl;
 
         try{
             $ch = curl_init();
@@ -72,7 +74,7 @@ class EndpointHandler
 
     public function itemApiCurl($item_id)
     {
-        $redirect_uri = 'https://eu.api.blizzard.com/data/wow/item/'. $item_id;
+        $redirect_uri = $this->itemApiUrl. $item_id;
 
         try{
             $ch = curl_init();

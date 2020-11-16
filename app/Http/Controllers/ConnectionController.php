@@ -22,17 +22,21 @@ class ConnectionController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * [saveConnectedRealmApiData description]
      *
-     * @return \Illuminate\Http\Response
+     * @return  [type]  [return description]
      */
-
     public function saveConnectedRealmApiData(){
         $data = $this->getConnectedRealmApiData();
         $realm_handler = new RealmHandler;
         $realm_handler->storeRealm($data);
     }
 
+    /**
+     * [getConnectedRealmApiData description]
+     *
+     * @return  [json]  [return description]
+     */
     public function getConnectedRealmApiData()
     {
         $endpoint_handler = new EndpointHandler;
@@ -44,6 +48,11 @@ class ConnectionController extends Controller
         return $data;
     }
 
+    /**
+     * [getAndSaveConnectedRealmApiName description]
+     *
+     * @return  [type]  [return description]
+     */
     public function getAndSaveConnectedRealmApiName(){
         $endpoint_handler = new EndpointHandler;
         $realm_handler = new RealmHandler;
@@ -60,6 +69,11 @@ class ConnectionController extends Controller
         }
     }
 
+    /**
+     * [getAndSaveConnectedRealmAuctionHouseApiData description]
+     *
+     * @return  [integer]  [devuelve numero de subastas]
+     */
     public function getAndSaveConnectedRealmAuctionHouseApiData(){
         $url = 'https://eu.api.blizzard.com/data/wow/connected-realm/'.$this->selectedRealm.'/auctions?namespace=dynamic-eu';
 
@@ -91,17 +105,19 @@ class ConnectionController extends Controller
         return $item_count;
     }
 
+    /**
+     * [getAndSaveItemData description]
+     *
+     * @return  [bool]  [devuelve true]
+     */
     public function getAndSaveItemData(){
         $endpoint_handler = new EndpointHandler;
         $item_handler = new ItemHandler;
         $items_id = ItemHandler::getItemsIdFromAuctionsNotInsideItems();
         foreach($items_id as $item_id){
             set_time_limit(40);
-            if($item_id->item_id == 87450 || $item_id->item_id == 15347 || $item_id->item_id == 55413 || $item_id->item_id == 116567 || $item_id->item_id == 6591 || $item_id->item_id == 38781){
-                echo 'entra '.$item_id->item_id;
-            }
             $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);
-            if(isset(json_decode($item_data)->code) && json_decode($item_data)->code == 404){
+            if(isset(json_decode($item_data)->code) && json_decode($item_data)->code == 404 && json_decode($item_data)->detail == 'Not Found'){
                 $item_handler->deleteItemAndRelatedAuction($item_id->item_id);
                 unset($item_data);
                 continue;
@@ -118,7 +134,6 @@ class ConnectionController extends Controller
     }
 
     public function getItemApiData($item_id){
-        $url = 'https://eu.api.blizzard.com/data/wow/connected-realm/'.$this->selectedRealm.'/auctions?namespace=dynamic-eu';
 
         $endpoint_handler = new EndpointHandler;
         $data = $endpoint_handler->itemApiCurl($item_id);

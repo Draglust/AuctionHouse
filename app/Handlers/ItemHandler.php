@@ -22,9 +22,7 @@ class ItemHandler
     public function saveItemData($data){
         try{
             $item_already_inserted = Item::where('id', '=', $data->id)->get();
-            if($data->id == 87450 || $data->id == 15347 ||  $data->id == 55413 ||  $data->id == 116567 ||  $data->id == 6591 || $data->id == 38781){
-                echo 'entra '.$data->id.'| cuenta es '.$item_already_inserted->count();
-            }
+
             if($item_already_inserted->count() == 0){
                 $item = new Item;
                 $item->id = $data->id;
