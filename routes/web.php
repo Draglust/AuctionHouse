@@ -19,6 +19,9 @@ Route::get('/', function () {
 Route::get('/demo', function () {
     return view('demo');
 });
+Route::get('/scaffolding', function () {
+    return view('scaffolding');
+});
 
 Route::get('/request', 'ConnectionController@getCredentials');
 Route::get('/realmapidata', 'ConnectionController@saveConnectedRealmApiData'); //Carga de las url de los reinos

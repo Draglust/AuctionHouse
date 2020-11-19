@@ -88,17 +88,14 @@ class ConnectionController extends Controller
         $auction_last_change_date = $auctionlive_handler->getLastChangeDate($data['header']);
         $last_auction_date_in_db = $auctionlive_handler->getLastAuctionDate();
 
-        $item_count = 0;
-
         if($last_auction_date_in_db != $auction_last_change_date){
             $data = json_decode($data['body']);
 
             $auctions_array = $auctionlive_handler->prepareAuctionData($data);
-
             $auctions_array = $auctionlive_handler->adaptAuctionArrayToInsert($auctions_array, $auction_last_change_date);
-
             $auctionlive_handler->storeAuctionLiveBatch($auctions_array);
-            $item_count = count($auctions_array);
+            $item_count = count($auctions_array) ?? 0;
+
             unset($auctions_array);
         }
 
@@ -114,23 +111,9 @@ class ConnectionController extends Controller
         $endpoint_handler = new EndpointHandler;
         $item_handler = new ItemHandler;
         $items_id = ItemHandler::getItemsIdFromAuctionsNotInsideItems();
-        foreach($items_id as $item_id){
-            set_time_limit(40);
-            $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);
-            if(isset(json_decode($item_data)->code) && json_decode($item_data)->code == 404 && json_decode($item_data)->detail == 'Not Found'){
-                $item_handler->deleteItemAndRelatedAuction($item_id->item_id);
-                unset($item_data);
-                continue;
-            }
-            if(empty($item_data)){
-                $endpoint_handler->refreshToken();
-                $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);
-            }
-            $item_data = json_decode($item_data);
-            $item_handler->saveItemData($item_data);
-            unset($item_data);
-        }
-        return true;
+        $iteration_through_items = $item_handler->iterateItemsGetSaveData($items_id);
+
+        return $iteration_through_items;
     }
 
     public function getItemApiData($item_id){

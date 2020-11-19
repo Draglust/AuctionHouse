@@ -19,6 +19,29 @@ class ItemHandler
         Auctionlive::where('item_id', '=', $item_id)->delete();
     }
 
+    public function iterateItemsGetSaveData($items_id){
+        $endpoint_handler = new EndpointHandler;
+        $item_handler = new ItemHandler;
+        foreach($items_id as $item_id){
+            set_time_limit(40);
+            $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);
+            if(isset(json_decode($item_data)->code) && json_decode($item_data)->code == 404 && json_decode($item_data)->detail == 'Not Found'){
+                $item_handler->deleteItemAndRelatedAuction($item_id->item_id);
+                unset($item_data);
+                continue;
+            }
+            if(empty($item_data)){
+                $endpoint_handler->refreshToken();
+                $item_data = $endpoint_handler->itemApiCurl($item_id->item_id);
+            }
+            $item_data = json_decode($item_data);
+            $item_handler->saveItemData($item_data);
+            unset($item_data);
+        }
+
+        return true;
+    }
+
     public function saveItemData($data){
         try{
             $item_already_inserted = Item::where('id', '=', $data->id)->get();
