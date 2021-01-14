@@ -74,6 +74,17 @@
                                 </li>
                             </ul>
                         </li>
+                        <li class="has-sub">
+                            <a class="js-arrow" href="#">
+                                <i class="fas fa-tachometer-alt"></i>Clases</a>
+                            <ul class="navbar-mobile-sub__list list-unstyled js-sub-list">
+                                @foreach($classes as $class)
+                                    <li>
+                                        <a href="index.html">{{ $class->item_class }}</a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </li>
                         <li>
                             <a href="chart.html">
                                 <i class="fas fa-chart-bar"></i>Charts</a>
@@ -442,6 +453,7 @@
             <div class="main-content">
                 <div class="section__content section__content--p30">
                     <div class="container-fluid">
+                        @section('central_div')
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="overview-wrap">
@@ -976,6 +988,7 @@
                                 </div>
                             </div>
                         </div>
+                    @endsection
                     </div>
                 </div>
             </div>
@@ -984,9 +997,8 @@
         </div>
 
     </div>
-    @section('javascripts')
+    @include('javascripts')
 
-    @endsection
 
 
 </body>

@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('main');
-});
+// Route::get('/', function () {
+//     return view('main');
+// });
 Route::get('/demo', function () {
     return view('demo');
 });
@@ -23,6 +23,7 @@ Route::get('/scaffolding', function () {
     return view('scaffolding');
 });
 
+Route::get('/main', 'DataController@getClasses');
 Route::get('/request', 'ConnectionController@getCredentials');
 Route::get('/realmapidata', 'ConnectionController@saveConnectedRealmApiData'); //Carga de las url de los reinos
 Route::get('/realmapinames', 'ConnectionController@getAndSaveConnectedRealmApiName'); //Carga de los nombres de los reinos en base a las url previas

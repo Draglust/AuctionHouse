@@ -8,6 +8,11 @@ use App\Models\AuctionLive;
 
 class ItemHandler
 {
+    public static function getClasses(){
+        $classes = Item::select('item_class','item_class_id')->distinct()->get();
+
+        return $classes;
+    }
     public static function getItemsIdFromAuctionsNotInsideItems(){
         $items_id = Item::pluck('id')->unique();
         $items_id_in_auctions = AuctionLive::whereNotIn('item_id',$items_id->all())->select('item_id')->distinct()->get();

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+
 <!-- Jquery JS-->
 <script src="{{ asset('vendor/jquery-3.2.1.min.js') }}"></script>
 <!-- Bootstrap JS-->
@@ -21,3 +21,4 @@
 
 <!-- Main JS-->
 <script src="{{ asset('js/main.js') }}"></script>
+
