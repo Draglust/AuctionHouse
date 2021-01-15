@@ -29,3 +29,4 @@ Route::get('/realmapidata', 'ConnectionController@saveConnectedRealmApiData'); /
 Route::get('/realmapinames', 'ConnectionController@getAndSaveConnectedRealmApiName'); //Carga de los nombres de los reinos en base a las url previas
 Route::get('/auctionhouse', 'ConnectionController@getAndSaveConnectedRealmAuctionHouseApiData'); //Carga de todas las subastas "live"
 Route::get('/getItems', 'ConnectionController@getAndSaveItemData'); //Carga de todas las subastas "live"
+Route::get('/getProfessions', 'ConnectionController@getProfessions'); //Carga de todas las subastas "live"

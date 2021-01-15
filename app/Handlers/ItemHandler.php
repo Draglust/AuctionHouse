@@ -5,6 +5,7 @@ namespace App\Handlers;
 use Exception as GlobalException;
 use App\Models\Item;
 use App\Models\AuctionLive;
+use Illuminate\Support\Facades\Cache;
 
 class ItemHandler
 {
@@ -46,6 +47,28 @@ class ItemHandler
 
         return true;
     }
+    public function getItemAndSaveData($item_id){
+        $endpoint_handler = new EndpointHandler;
+        $item_handler = new ItemHandler;
+        set_time_limit(40);
+        //$item_data = $endpoint_handler->itemApiCurl($item_id);
+        $item_data = Cache::store('file')->get('item:'.$item_id) ?? $endpoint_handler->itemApiCurl($item_id);
+        Cache::store('file')->put('item:'.$item_id, $item_data, 3600);
+        if(isset(json_decode($item_data)->code) && json_decode($item_data)->code == 404 && json_decode($item_data)->detail == 'Not Found'){
+            $item_handler->deleteItemAndRelatedAuction($item_id);
+            unset($item_data);
+            return false;
+        }
+        if(empty($item_data)){
+            $endpoint_handler->refreshToken();
+            $item_data = $endpoint_handler->itemApiCurl($item_id);
+        }
+        $item_data = json_decode($item_data);
+        $item_handler->saveItemData($item_data);
+        unset($item_data);
+
+        return true;
+    }
 
     public function saveItemData($data){
         try{
@@ -58,7 +81,7 @@ class ItemHandler
                 $item->quality = $data->quality->type;
                 $item->level = $data->level;
                 $item->required_level = $data->required_level;
-                $item->sell_price = $data->sell_price;
+                $item->sell_price = $data->preview_item->sell_price->value ?? $data->sell_price;
                 $item->purchase_price = $data->purchase_price;
                 $item->item_class = $data->item_class->name->es_ES ?? $data->item_class->name->es_MX;
                 $item->item_class_id = $data->item_class->id;
@@ -77,5 +100,11 @@ class ItemHandler
             dd($data);
         }
         return false;
+    }
+
+    public function getItemVendorPrice($item_id){
+        $item  = Item::where('id', '=', $item_id)->get();
+
+        return $item->first()->sell_price ?? 0;
     }
 }

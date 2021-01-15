@@ -29,7 +29,7 @@ class AuctionLiveHandler
     public static function getLastAuctionDate(){
         $auction = AuctionLive::orderBy('date', 'desc')->first();
 
-        return $auction->date;
+        return isset($auction->date) ? $auction->date : FALSE ;
     }
 
     public function storeAuctionLiveBatch($data){
@@ -57,7 +57,7 @@ class AuctionLiveHandler
                     $auctions_array[$raw_auction->item->id]['prices'][] = $raw_auction->unit_price;
                 }
                 else{
-                    $auctions_array[$raw_auction->item->id]['prices'] = $this->getTenMinimumPrices($auctions_array[$raw_auction->item->id]['prices'], $raw_auction->unit_price);
+                    $auctions_array[$raw_auction->item->id]['prices'] = $this->getMinimumPrice($auctions_array[$raw_auction->item->id]['prices'], $raw_auction->unit_price);
                 }
 
                 unset($data->auctions[$index]);
@@ -98,6 +98,16 @@ class AuctionLiveHandler
         return $array;
     }
 
+    public function getMinimumPrice($array, $unit_price){
+
+        if(max($array)> $unit_price){
+            $return_array[] = $unit_price;
+            $array = $return_array;
+        }
+
+        return $array;
+    }
+
     public function getLastChangeDate($header){
         preg_match('/Last-Modified: (.*){3},(.*)GMT/',$header, $coincidences);
         $date = date('Y-m-d H:i:s');
@@ -105,5 +115,17 @@ class AuctionLiveHandler
             $date = date('Y-m-d H:i:s', strtotime('+1 hour '.trim($coincidences[2])));
         }
         return $date;
+    }
+
+    public function getMaxAuctionDate(){
+        $item = AuctionLive::max('date');
+
+        return $item;
+    }
+
+    public function getItemPriceFromLastAuctionDate($item_id){
+        $item = AuctionLive::where('item_id', '=', $item_id)->where('date', $this->getMaxAuctionDate())->get();
+
+        return $item->first()->unit_price ?? 0;
     }
 }
