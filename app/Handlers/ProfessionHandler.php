@@ -3,8 +3,8 @@
 namespace App\Handlers;
 
 use Exception as GlobalException;
-use App\Models\Item;
-use App\Models\AuctionLive;
+use App\Handlers\EndpointHandler as EndpointHandler;
+use Illuminate\Support\Facades\Cache;
 
 class ProfessionHandler
 {
@@ -20,6 +20,32 @@ class ProfessionHandler
         $professions['inscription'] = 'https://eu.api.blizzard.com/data/wow/profession/773?namespace=static-9.0.2_36532-eu';
 
         return isset($professions[$profession_name]) ? array($profession_name => $professions[$profession_name]) : $professions ;
+    }
+
+    public function getProfessionDataGivenUrl($profession_url){
+        $endpoint_handler = new EndpointHandler;
+
+        $profession_data = Cache::store('file')->get($profession_url) ?? $endpoint_handler->genericBlizzardConnection($profession_url);
+        if(empty($profession_data['body'])){
+            $endpoint_handler->refreshToken();
+            $profession_data = $endpoint_handler->genericBlizzardConnection($profession_url);
+        }
+        Cache::store('file')->put($profession_url, $profession_data, 3600);
+
+        return $profession_data;
+    }
+
+    public function getTierDataGivenUrl($tier_url){
+        $endpoint_handler = new EndpointHandler;
+
+        $tier_data = Cache::store('file')->get($tier_url) ?? $endpoint_handler->genericBlizzardConnection($tier_url);
+        if(empty($tier_data['body'])){
+            $endpoint_handler->refreshToken();
+            $tier_data = $endpoint_handler->genericBlizzardConnection($tier_url);
+        }
+        Cache::store('file')->put($tier_url, $tier_data, 3600);
+
+        return $tier_data;
     }
 
 }

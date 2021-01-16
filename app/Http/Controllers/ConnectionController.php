@@ -9,8 +9,11 @@ use App\Handlers\RealmHandler as RealmHandler;
 use App\Handlers\AuctionLiveHandler as AuctionLiveHandler;
 use App\Handlers\ItemHandler as ItemHandler;
 use App\Handlers\ProfessionHandler as ProfessionHandler;
+use App\Handlers\RecipeHandler as RecipeHandler;
+use App\Handlers\ReagentHandler as ReagentHandler;
 use Exception as GlobalException;
 use Illuminate\Support\Facades\Cache;
+use stdClass;
 
 class ConnectionController extends Controller
 {
@@ -136,95 +139,54 @@ class ConnectionController extends Controller
         return $data;
     }
 
-    public function getProfessions(){
+    public function getProfitRecipes(){
 
-        $profession_handler = new ProfessionHandler;
         $auctionlive_handler = new AuctionLiveHandler;
-        $endpoint_handler = new EndpointHandler;
         $item_handler = new ItemHandler;
+        $recipe_handler = new RecipeHandler;
+        $reagent_handler = new ReagentHandler;
 
+        /**
+         * CAMBIAR POR COMPLETO LA FUNCION USANDO LAS RECETAS EN BD
+         */
         try {
-            $professions = $profession_handler->getCraftingProfessions('skinning');
-            $cheap_recipes = [];
-            foreach($professions as $index => $profession_url){
-                $profession_data = Cache::store('file')->get($profession_url) ?? $endpoint_handler->genericBlizzardConnection($profession_url);
-                Cache::store('file')->put($profession_url, $profession_data, 3600); // 60 Minutes
-                //$profession_data = $endpoint_handler->genericBlizzardConnection($profession_url);
-                if(empty($profession_data['body'])){
-                    $endpoint_handler->refreshToken();
-                    $profession_data = $endpoint_handler->genericBlizzardConnection($profession_url);
-                    Cache::store('file')->put($profession_url, $profession_data, 3600); // 60 Minutes
-                }
-                $profession_tiers = json_decode($profession_data['body'])->skill_tiers;
-                foreach($profession_tiers as $tier){
-                    $tier_name = $tier->name->es_ES;
-                    //$tier_data = $endpoint_handler->genericBlizzardConnection($tier->key->href);
-                    $tier_data = Cache::store('file')->get($tier->key->href) ?? $endpoint_handler->genericBlizzardConnection($tier->key->href);
-                    Cache::store('file')->put($tier->key->href, $tier_data, 3600);
-                    if(empty($tier_data['body'])){
-                        $endpoint_handler->refreshToken();
-                        $tier_data = $endpoint_handler->genericBlizzardConnection($tier->key->href);
-                        Cache::store('file')->put($tier->key->href, $tier_data, 3600);
-                    }
-                    $tier_categories = json_decode($tier_data['body'])->categories;
-                    foreach($tier_categories as $category){
-                        $category_name = $category->name->es_ES;
-                        $category_recipes = $category->recipes;
-                        echo '<pre>'.$tier_name.':'.$category_name.':'.count($category_recipes).'</pre>';
-                        foreach($category_recipes as $recipe){
-                            set_time_limit(20);
-                            $recipe_name = $recipe->name->es_ES;
-                            $recipe_id = $recipe->id;
-                            //$recipe_data = $endpoint_handler->genericBlizzardConnection($recipe->key->href);
-                            $recipe_data = Cache::store('file')->get($recipe->key->href) ?? $endpoint_handler->genericBlizzardConnection($recipe->key->href);
-                            Cache::store('file')->put($recipe->key->href, $recipe_data, 3600);
-                            if(empty($recipe_data['body'])){
-                                $endpoint_handler->refreshToken();
-                                $recipe_data = $endpoint_handler->genericBlizzardConnection($recipe->key->href);
-                                Cache::store('file')->put($recipe->key->href, $recipe_data, 3600);
-                            }
-                            $decoded_recipe_data = json_decode($recipe_data['body']);
-                            $crafted_item_id = $decoded_recipe_data->crafted_item->id ?? ($decoded_recipe_data->alliance_crafted_item->id ?? $decoded_recipe_data->id);
-                            $crafted_item_vendor_price = $item_handler->getItemVendorPrice($crafted_item_id);
+            $recipe_list = $recipe_handler->getAllRecipes();
 
-                            if($crafted_item_vendor_price == 0){
-                                $item_handler->getItemAndSaveData($crafted_item_id);
-                            }
-                            if(!isset($decoded_recipe_data->reagents) || $crafted_item_vendor_price == 0){
-                                continue;
-                            }
-                            $recipe_reagents = $decoded_recipe_data->reagents;
-                            $crafting_price = 0;
-                            $avoid = FALSE;
+            foreach($recipe_list as $recipe){
+                set_time_limit(20);
+                $avoid = FALSE;
+                $crafting_price = 0;
 
-                            foreach($recipe_reagents as $reagent){
-                                $reagent_quantity = $reagent->quantity;
-                                $reagent_id = $reagent->reagent->id;
-                                $reagent_name = $reagent->reagent->name->es_ES;
-                                $item_price = $auctionlive_handler->getItemPriceFromLastAuctionDate($reagent_id);
-                                if($item_price != 0){
-                                    $crafting_price += ($reagent_quantity * $item_price);
-                                    $reagents_list[$recipe_name][] =  $reagent_name."[$reagent_quantity:$item_price]";
-                                }else{
-                                    unset($cheap_recipes[$index][$tier_name][$recipe_name]);
-                                    unset($reagents_list[$recipe_name]);
-                                    $avoid = TRUE;
-                                }
-                            }
-                            if(!$avoid  && ($crafted_item_vendor_price - $crafting_price)> 0){
-                                $cheap_recipes[$index][$tier_name][$recipe_name]['price'] =  $crafted_item_vendor_price - $crafting_price;
-                                $cheap_recipes[$index][$tier_name][$recipe_name]['reagents'] = $reagents_list[$recipe_name];
-                            }
-                            unset($reagents_list[$recipe_name]);
-                        }
-                        // if(isset($cheap_recipes[$index][$tier_name]) && is_array($cheap_recipes[$index][$tier_name])){
-                        //     array_multisort($cheap_recipes[$index][$tier_name]['price'],SORT_DESC, SORT_NUMERIC);
-                        // }
+                $reagents = $reagent_handler->getReagentByRecipeId($recipe['id']);
+                $crafted_item_vendor_price = $item_handler->getItemVendorPriceOrSearchIt($recipe['crafted_item_id']);
+                foreach ($reagents as $index => $reagent) {
+                    $reagent_quantity = $reagent['quantity'];
+                    $reagent_id = $reagent['item_id'];
+                    $item_price = $auctionlive_handler->getItemPriceFromLastAuctionDate($reagent_id);
+                    if($item_price != 0){
+                        $crafting_price += ($reagent_quantity * $item_price);
+                        $reagents_list[$recipe['recipe_name']][] =  $recipe['recipe_name']."[$reagent_quantity:$item_price]";
+                    }else{
+                        //unset($cheap_recipes[$recipe['profession']][$recipe['tier_name']][$recipe['recipe_name']]);
+                        unset($reagents_list[$recipe['recipe_name']]);
+                        $avoid = TRUE;
                     }
                 }
+                if(!$avoid  && ($crafted_item_vendor_price - $crafting_price)> 0 && $crafting_price != 0){
+                    $cheap_recipes[$recipe['profession']][$recipe['tier_name']][$recipe['recipe_name']]['price'] =  $crafted_item_vendor_price - $crafting_price;
+                    $cheap_recipes[$recipe['profession']][$recipe['recipe_name']]['reagents'] = $reagents_list[$recipe['recipe_name']];
+                }
+                unset($reagents_list[$recipe['recipe_name']]);
+
             }
-        } catch (\Throwable $th) {
-            $decoded_recipe_data;
+            // if(isset($cheap_recipes[$index][$tier_name]) && is_array($cheap_recipes[$index][$tier_name])){
+            //     array_multisort($cheap_recipes[$index][$tier_name]['price'],SORT_DESC, SORT_NUMERIC);
+            // }
+
+
+
+        } catch (GlobalException $e) {
+            dd($recipe);
         }
         echo '<pre>';
         var_dump($cheap_recipes);
@@ -232,4 +194,72 @@ class ConnectionController extends Controller
         return TRUE;
     }
 
+    public function getRecipes(){
+
+        $profession_handler = new ProfessionHandler;
+        $recipe_handler = new RecipeHandler;
+        $reagent_handler = new ReagentHandler;
+
+        try {
+            $professions = $profession_handler->getCraftingProfessions();
+            foreach($professions as $profession_name => $profession_url){
+                $profession_data = $profession_handler->getProfessionDataGivenUrl($profession_url);
+                $profession_tiers = json_decode($profession_data['body'])->skill_tiers;
+                foreach($profession_tiers as $tier){
+                    $tier_name = $tier->name->es_ES;
+                    $tier_data = $profession_handler->getTierDataGivenUrl($tier->key->href);
+                    $tier_categories = json_decode($tier_data['body'])->categories;
+                    foreach($tier_categories as $category){
+                        $category_name = $category->name->es_ES;
+                        $category_recipes = $category->recipes;
+                        $recipes = $recipe_handler->getNotInsertedRecipes($category_recipes);
+
+                        foreach($recipes as $recipe){
+                            set_time_limit(20);
+
+                            $recipe_data = $recipe_handler->getRecipeDataGivenUrl($recipe->key->href);
+                            $decoded_recipe_data = json_decode($recipe_data['body']);
+
+                            if(!isset($decoded_recipe_data->crafted_item->id)){
+                                continue;
+                            }
+                            $recipe_data_to_save = new stdClass();
+                            $recipe_data_to_save->id = $recipe->id;
+                            $recipe_data_to_save->profession = $profession_name;
+                            $recipe_data_to_save->tier_name = $tier_name;
+                            $recipe_data_to_save->category_name = $category_name;
+                            $recipe_data_to_save->recipe_name = $recipe->name->es_ES;
+                            $recipe_data_to_save->recipe_url = $recipe->key->href;
+                            $recipe_data_to_save->crafted_item_id = $decoded_recipe_data->crafted_item->id;
+                            $recipe_handler->saveRecipeData($recipe_data_to_save);
+
+                            if(!isset($decoded_recipe_data->reagents)){
+                                continue;
+                            }
+                            $recipe_reagents = $decoded_recipe_data->reagents;
+
+                            foreach($recipe_reagents as $reagent){
+                                $reagent_data = new stdClass();
+                                $reagent_data->item_id = $reagent->reagent->id;
+                                $reagent_data->recipe_id = $recipe->id;
+                                $reagent_data->quantity = $reagent->quantity;
+                                $reagent_handler->saveReagentData($reagent_data);
+                            }
+
+                        }
+
+                    }
+                }
+            }
+        } catch (GlobalException $e) {
+            echo __FUNCTION__;
+            dd($decoded_recipe_data);
+        }
+        // echo '<pre>';
+        // var_dump($cheap_recipes);
+        // echo '</pre>';
+        return true;
+    }
+
 }
+

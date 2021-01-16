@@ -102,6 +102,17 @@ class ItemHandler
         return false;
     }
 
+    public function getItemVendorPriceOrSearchIt($item_id){
+        $item  = Item::where('id', '=', $item_id)->get();
+
+        if(!isset($item->first()->sell_price)){
+            $this->getItemAndSaveData($item_id);
+            $item  = Item::where('id', '=', $item_id)->get();
+        }
+
+        return $item->first()->sell_price ?? 0;
+    }
+
     public function getItemVendorPrice($item_id){
         $item  = Item::where('id', '=', $item_id)->get();
 
