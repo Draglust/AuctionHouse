@@ -140,4 +140,41 @@ class EndpointHandler
             return $exception->getMessage();
         }
     }
+
+    public function genericWowheadItemConnection($item_id = NULL)
+    {
+        $url = 'https://es.wowhead.com/item='.$item_id;
+        try{
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HEADER, 1);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+
+            // $headers = array();
+            // $headers[] = 'Authorization: Bearer '.$this->token;
+
+            // curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+            $result = curl_exec($ch);
+
+            $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            $header = trim(substr($result, 0, $header_size));
+            $body = substr($result, $header_size);
+            $response['header'] = $header;
+            $response['body'] = $body;
+            if (curl_errno($ch)) {
+                echo 'Error:' . curl_error($ch);
+            }
+            curl_close($ch);
+
+            return $response;
+        }
+        catch(GlobalException $exception){
+            //return back()->withError($exception->getMessage())->withInput();
+            return $exception->getMessage();
+        }
+    }
 }

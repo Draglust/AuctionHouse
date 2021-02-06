@@ -11,8 +11,8 @@ use App\Handlers\ItemHandler as ItemHandler;
 use App\Handlers\ProfessionHandler as ProfessionHandler;
 use App\Handlers\RecipeHandler as RecipeHandler;
 use App\Handlers\ReagentHandler as ReagentHandler;
+use App\Handlers\WowheadHandler as WowheadHandler;
 use Exception as GlobalException;
-use Illuminate\Support\Facades\Cache;
 use stdClass;
 
 class ConnectionController extends Controller
@@ -24,12 +24,13 @@ class ConnectionController extends Controller
     {
         $this->selectedRealm = RealmHandler::getRealmBySlug('dun-modr');
         $this->token = TokenHandler::getActiveTokenValueFromDB();
-        ini_set('display_errors', 1);
-        ini_set('display_startup_errors', 1);
-        error_reporting(E_ALL);
+        // ini_set('display_errors', 1);
+        // ini_set('display_startup_errors', 1);
+        // error_reporting(E_ALL);
         ini_set("xdebug.var_display_max_children", '-1');
         ini_set("xdebug.var_display_max_data", '-1');
         ini_set("xdebug.var_display_max_depth", '-1');
+        ini_set("xdebug.max_nesting_level", '-1');
     }
 
     /**
@@ -113,6 +114,7 @@ class ConnectionController extends Controller
         return $item_count;
     }
 
+
     /**
      * [getAndSaveItemData description]
      *
@@ -163,20 +165,23 @@ class ConnectionController extends Controller
                     $reagent_quantity = $reagent['quantity'];
                     $reagent_id = $reagent['item_id'];
                     $item_price = $auctionlive_handler->getItemPriceFromLastAuctionDate($reagent_id);
+                    if($item_price == 0){
+                        $item_price = $item_handler->getItemVendorPriceOrSearchIt($reagent_id);
+                    }
                     if($item_price != 0){
                         $crafting_price += ($reagent_quantity * $item_price);
-                        $reagents_list[$recipe['recipe_name']][] =  $recipe['recipe_name']."[$reagent_quantity:$item_price]";
+                        //$reagents_list[$recipe['recipe_name']][] =  $recipe['recipe_name']."[$reagent_quantity:$item_price]";
                     }else{
                         //unset($cheap_recipes[$recipe['profession']][$recipe['tier_name']][$recipe['recipe_name']]);
-                        unset($reagents_list[$recipe['recipe_name']]);
+                        //unset($reagents_list[$recipe['recipe_name']]);
                         $avoid = TRUE;
                     }
                 }
                 if(!$avoid  && ($crafted_item_vendor_price - $crafting_price)> 0 && $crafting_price != 0){
                     $cheap_recipes[$recipe['profession']][$recipe['tier_name']][$recipe['recipe_name']]['price'] =  $crafted_item_vendor_price - $crafting_price;
-                    $cheap_recipes[$recipe['profession']][$recipe['recipe_name']]['reagents'] = $reagents_list[$recipe['recipe_name']];
+                    //$cheap_recipes[$recipe['profession']][$recipe['recipe_name']]['reagents'] = $reagents_list[$recipe['recipe_name']];
                 }
-                unset($reagents_list[$recipe['recipe_name']]);
+                //unset($reagents_list[$recipe['recipe_name']]);
 
             }
             // if(isset($cheap_recipes[$index][$tier_name]) && is_array($cheap_recipes[$index][$tier_name])){
@@ -186,6 +191,7 @@ class ConnectionController extends Controller
 
 
         } catch (GlobalException $e) {
+            dd($e);
             dd($recipe);
         }
         echo '<pre>';
@@ -260,6 +266,36 @@ class ConnectionController extends Controller
         // echo '</pre>';
         return true;
     }
+
+    public function getRoutePoints($item_id = NULL){
+        //id de ejemplo 172053
+        $parsed_array = [];
+        $wowhead_handler = new WowheadHandler;
+        $web_data = $wowhead_handler->getWebData($item_id, 'item');
+        $dropped_by_data = $wowhead_handler->getCleanedDroppedByData($web_data);
+        foreach($dropped_by_data as $dropping_npc){
+            $name = $dropping_npc->name;
+            $id = $dropping_npc->id;
+            $npc_web_data = $wowhead_handler->getWebData($dropping_npc->id, 'npc', $dropping_npc->name);
+            $cleaned_dropped_by_data = $wowhead_handler->getCleanedNpcData($npc_web_data);
+            if($cleaned_dropped_by_data == NULL){
+                continue;
+            }
+            $parsed_data = $wowhead_handler->parseData($cleaned_dropped_by_data);
+            $parsed_array[$parsed_data['index']]['values']['uiMapId'] = $parsed_data['values']['uiMapId'];
+            $parsed_array[$parsed_data['index']]['values']['uiMapName'] = $parsed_data['values']['uiMapName'];
+            $parsed_array[$parsed_data['index']]['values']['count'] = isset($parsed_array[$parsed_data['index']]['values']['count'])
+                                                                        ? $parsed_array[$parsed_data['index']]['values']['count'] + $parsed_data['values']['count']
+                                                                        : $parsed_data['values']['count'];
+            $parsed_array[$parsed_data['index']]['values']['coords'] = isset($parsed_array[$parsed_data['index']]['values']['coords'])
+                                                                        ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords'], $parsed_data['values']['coords'])
+                                                                        : $parsed_data['values']['coords'];
+            unset($parsed_data);
+        }
+
+        return view("maps")->with('maps',$parsed_array);
+    }
+
 
 }
 

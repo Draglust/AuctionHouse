@@ -31,3 +31,4 @@ Route::get('/auctionhouse', 'ConnectionController@getAndSaveConnectedRealmAuctio
 Route::get('/getItems', 'ConnectionController@getAndSaveItemData'); //Carga de todas las subastas "live"
 Route::get('/getRecipes', 'ConnectionController@getRecipes'); //Carga de todas las subastas "live"
 Route::get('/getProfitRecipes', 'ConnectionController@getProfitRecipes'); //Carga de todas las subastas "live"
+Route::get('/getWItemData/{id}', 'ConnectionController@getRoutePoints'); //Carga de todas las subastas "live"
