@@ -92,10 +92,18 @@ class WowheadHandler
     }
 
     public function appendCoords($original_array, $coords_to_append){
-        foreach($coords_to_append as $coord){
-            array_push($original_array, $coord);
+        try {
+            if(is_array($coords_to_append)){
+                foreach($coords_to_append as $coord){
+                    array_push($original_array, $coord);
+                }
+            }
+            return $original_array;
+        } catch (GlobalException $ex) {
+            echo __FUNCTION__;
+            dd($coords_to_append);
         }
-        return $original_array;
+
     }
 
     public function getNpcData($data){
