@@ -28,7 +28,7 @@
                                         @endif
                                         @if(isset($map['values']['coords_elite']))
                                             @foreach($map['values']['coords_elite'] as $coord)
-                                                <div style="left:{{$coord[0]}}%;top:{{$coord[1]}}%;position:absolute;width:1px;height:1px;font-size:1px;z-index:5;margin-left:50%;">
+                                                <div style="left:{{$coord[0]}}%;top:{{$coord[1]}}%;position:absolute;width:1px;height:1px;font-size:1px;z-index:6;margin-left:50%;">
                                                     <img src="{{asset('resources/images/pin-yellow.png')}}" style="position:relative;width:11px;height:11px;display:block">
                                                 </div>
                                             @endforeach
