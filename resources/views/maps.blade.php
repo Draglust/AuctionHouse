@@ -18,7 +18,7 @@
                         <div class="row">
                             <div class="col-md-12">
                                     <div style="max-width: 1002px; max-height: 668px; cursor: pointer; display:block;position:relative">
-                                        <img src="https://wow.zamimg.com/images/wow/maps/eses/original/{{$key}}.jpg" alt="">
+                                        <img style="max-width: 1002px; max-height: 668px;" src="https://wow.zamimg.com/images/wow/maps/eses/original/{{$key}}.jpg" alt="">
                                         @foreach($map['values']['coords'] as $coord)
                                             <div style="left:{{$coord[0]}}%;top:{{$coord[1]}}%;position:absolute;width:1px;height:1px;font-size:1px;z-index:5">
                                                 <img src="{{asset('resources/images/pin-yellow.png')}}" style="position:relative;width:11px;height:11px;display:block">

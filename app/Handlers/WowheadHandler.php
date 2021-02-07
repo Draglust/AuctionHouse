@@ -17,7 +17,7 @@ class WowheadHandler
         try {
             $url = $this->selectUrlType($type).$id.'/'.strtolower($this->customUrlEncode(str_replace(' ','-',$name)));
             $data = Http::get($url);
-            file_put_contents('C:\temp\file.txt',json_encode($data->headers()).'\r\n', FILE_APPEND);
+            //file_put_contents('C:\temp\file.txt',json_encode($data->headers()).'\r\n', FILE_APPEND);
             if($data->status() == 200){
                 $body = $data->body();
             }
@@ -59,6 +59,14 @@ class WowheadHandler
 
     public function getCleanedDroppedByData($data){
         $dropped_by_data = $this->getDroppedByDataFromWebData($data);
+        $cleaned_data = $this->cleanData($dropped_by_data);
+        $decoded_data = $this->jsonDataToArray($cleaned_data);
+
+        return $decoded_data;
+    }
+
+    public function getCleanedSkinningByData($data){
+        $dropped_by_data = $this->getSkinnedDataFromWebData($data);
         $cleaned_data = $this->cleanData($dropped_by_data);
         $decoded_data = $this->jsonDataToArray($cleaned_data);
 
@@ -143,6 +151,18 @@ class WowheadHandler
 
     public function getDroppedByDataFromWebData($data){
         $pattern = "/dropped-by(.*)data: \[(.*)}],(.*)\);/isU";
+        $data = $this->decodeUnicodeString($data);
+        //file_put_contents('C:\temp\file.txt',$data);
+        preg_match_all($pattern, trim(preg_replace('/\s\s+/', ' ', str_replace(array('\n','\t','\r'),'',$data))), $matches);
+        if(!isset($matches[2][0])){
+            return NULL;
+        }
+
+        return $matches[2][0];
+    }
+
+    public function getSkinnedDataFromWebData($data){
+        $pattern = "/skinned-from(.*)data: \[(.*)}],(.*)\);/isU";
         $data = $this->decodeUnicodeString($data);
         //file_put_contents('C:\temp\file.txt',$data);
         preg_match_all($pattern, trim(preg_replace('/\s\s+/', ' ', str_replace(array('\n','\t','\r'),'',$data))), $matches);
