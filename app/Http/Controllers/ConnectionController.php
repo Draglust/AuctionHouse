@@ -302,10 +302,12 @@ class ConnectionController extends Controller
         $wowhead_handler = new WowheadHandler;
         $web_data = $wowhead_handler->getWebData($item_id, 'item');
         $skinned_data = $wowhead_handler->getCleanedSkinningByData($web_data);
-        foreach($skinned_data as $dropping_npc){
-            $name = $dropping_npc->name;
-            $id = $dropping_npc->id;
-            $npc_web_data = $wowhead_handler->getWebData($dropping_npc->id, 'npc', $dropping_npc->name);
+        foreach($skinned_data as $skinned_npc){
+            $name = $skinned_npc->name;
+            $id = $skinned_npc->id;
+            $classification = $skinned_npc->classification;
+            $reaction = $skinned_npc->react[0];
+            $npc_web_data = $wowhead_handler->getWebData($skinned_npc->id, 'npc', $skinned_npc->name);
             $cleaned_skinned_data = $wowhead_handler->getCleanedNpcData($npc_web_data);
             if($cleaned_skinned_data == NULL){
                 continue;
@@ -316,9 +318,22 @@ class ConnectionController extends Controller
             $parsed_array[$parsed_data['index']]['values']['count'] = isset($parsed_array[$parsed_data['index']]['values']['count'])
                                                                         ? $parsed_array[$parsed_data['index']]['values']['count'] + $parsed_data['values']['count']
                                                                         : $parsed_data['values']['count'];
-            $parsed_array[$parsed_data['index']]['values']['coords'] = isset($parsed_array[$parsed_data['index']]['values']['coords'])
-                                                                        ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords'], $parsed_data['values']['coords'])
+            if($classification == 0){
+                if($reaction == -1){
+                    $parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'] = isset($parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'])
+                                                                                ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'], $parsed_data['values']['coords'])
+                                                                                : $parsed_data['values']['coords'];
+                }
+                else{
+                    $parsed_array[$parsed_data['index']]['values']['coords_normal'] = isset($parsed_array[$parsed_data['index']]['values']['coords_normal'])
+                                                                                ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_normal'], $parsed_data['values']['coords'])
+                                                                                : $parsed_data['values']['coords'];
+                }
+            }else{
+                $parsed_array[$parsed_data['index']]['values']['coords_elite'] = isset($parsed_array[$parsed_data['index']]['values']['coords_elite'])
+                                                                        ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_elite'], $parsed_data['values']['coords'])
                                                                         : $parsed_data['values']['coords'];
+            }
             unset($parsed_data);
         }
 
