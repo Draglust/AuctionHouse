@@ -132,7 +132,31 @@ class WowheadHandler
         return $decoded_elements;
     }
 
-    public function getCoordsFromAllNpcToGetSkinned($skinned_data){
+    public function getCoordsFromAllNpcForDropping($dropped_by_data){
+        foreach($dropped_by_data as $dropping_npc){
+            $name = $dropping_npc->name;
+            $id = $dropping_npc->id;
+            $npc_web_data = $this->getWebData($dropping_npc->id, 'npc', $dropping_npc->name);
+            $cleaned_dropped_by_data = $this->getCleanedNpcData($npc_web_data);
+            if($cleaned_dropped_by_data == NULL){
+                continue;
+            }
+            $parsed_data = $this->parseData($cleaned_dropped_by_data);
+            $parsed_array[$parsed_data['index']]['values']['uiMapId'] = $parsed_data['values']['uiMapId'];
+            $parsed_array[$parsed_data['index']]['values']['uiMapName'] = $parsed_data['values']['uiMapName'];
+            $parsed_array[$parsed_data['index']]['values']['count'] = isset($parsed_array[$parsed_data['index']]['values']['count'])
+                                                                        ? $parsed_array[$parsed_data['index']]['values']['count'] + $parsed_data['values']['count']
+                                                                        : $parsed_data['values']['count'];
+            $parsed_array[$parsed_data['index']]['values']['coords_normal'] = isset($parsed_array[$parsed_data['index']]['values']['coords'])
+                                                                        ? $this->appendCoords($parsed_array[$parsed_data['index']]['values']['coords'], $parsed_data['values']['coords'])
+                                                                        : $parsed_data['values']['coords'];
+            unset($parsed_data);
+        }
+
+        return $parsed_array;
+    }
+
+    public function getCoordsFromAllNpcForSkinning($skinned_data){
         foreach($skinned_data as $skinned_npc){
             $name = $skinned_npc->name;
             $id = $skinned_npc->id;

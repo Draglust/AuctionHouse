@@ -275,25 +275,7 @@ class ConnectionController extends Controller
         $wowhead_handler = new WowheadHandler;
         $web_data = $wowhead_handler->getWebData($item_id, 'item');
         $dropped_by_data = $wowhead_handler->getCleanedDroppedByData($web_data);
-        foreach($dropped_by_data as $dropping_npc){
-            $name = $dropping_npc->name;
-            $id = $dropping_npc->id;
-            $npc_web_data = $wowhead_handler->getWebData($dropping_npc->id, 'npc', $dropping_npc->name);
-            $cleaned_dropped_by_data = $wowhead_handler->getCleanedNpcData($npc_web_data);
-            if($cleaned_dropped_by_data == NULL){
-                continue;
-            }
-            $parsed_data = $wowhead_handler->parseData($cleaned_dropped_by_data);
-            $parsed_array[$parsed_data['index']]['values']['uiMapId'] = $parsed_data['values']['uiMapId'];
-            $parsed_array[$parsed_data['index']]['values']['uiMapName'] = $parsed_data['values']['uiMapName'];
-            $parsed_array[$parsed_data['index']]['values']['count'] = isset($parsed_array[$parsed_data['index']]['values']['count'])
-                                                                        ? $parsed_array[$parsed_data['index']]['values']['count'] + $parsed_data['values']['count']
-                                                                        : $parsed_data['values']['count'];
-            $parsed_array[$parsed_data['index']]['values']['coords'] = isset($parsed_array[$parsed_data['index']]['values']['coords'])
-                                                                        ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords'], $parsed_data['values']['coords'])
-                                                                        : $parsed_data['values']['coords'];
-            unset($parsed_data);
-        }
+        $parsed_array = $wowhead_handler->getCoordsFromAllNpcForDropping($dropped_by_data);
 
         return view("maps")->with('maps',$parsed_array);
     }
@@ -304,7 +286,7 @@ class ConnectionController extends Controller
         $wowhead_handler = new WowheadHandler;
         $web_data = CacheHandler::skinningItemWebCache($item_id);
         $skinned_data = $wowhead_handler->getCleanedSkinningByData($web_data);
-        $parsed_array = $wowhead_handler->getCoordsFromAllNpcToGetSkinned($skinned_data);
+        $parsed_array = $wowhead_handler->getCoordsFromAllNpcForSkinning($skinned_data);
 
         return view("maps")->with('maps',$parsed_array);
     }
