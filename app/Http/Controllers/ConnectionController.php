@@ -12,6 +12,8 @@ use App\Handlers\ProfessionHandler as ProfessionHandler;
 use App\Handlers\RecipeHandler as RecipeHandler;
 use App\Handlers\ReagentHandler as ReagentHandler;
 use App\Handlers\WowheadHandler as WowheadHandler;
+use App\Handlers\CacheHandler as CacheHandler;
+use Illuminate\Support\Facades\Cache;
 use Exception as GlobalException;
 use stdClass;
 
@@ -24,9 +26,9 @@ class ConnectionController extends Controller
     {
         $this->selectedRealm = RealmHandler::getRealmBySlug('dun-modr');
         $this->token = TokenHandler::getActiveTokenValueFromDB();
-        // ini_set('display_errors', 1);
-        // ini_set('display_startup_errors', 1);
-        // error_reporting(E_ALL);
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        error_reporting(E_ALL);
         ini_set("xdebug.var_display_max_children", '-1');
         ini_set("xdebug.var_display_max_data", '-1');
         ini_set("xdebug.var_display_max_depth", '-1');
@@ -300,42 +302,9 @@ class ConnectionController extends Controller
         //id de ejemplo 172053
         $parsed_array = [];
         $wowhead_handler = new WowheadHandler;
-        $web_data = $wowhead_handler->getWebData($item_id, 'item');
+        $web_data = CacheHandler::skinningItemWebCache($item_id);
         $skinned_data = $wowhead_handler->getCleanedSkinningByData($web_data);
-        foreach($skinned_data as $skinned_npc){
-            $name = $skinned_npc->name;
-            $id = $skinned_npc->id;
-            $classification = $skinned_npc->classification;
-            $reaction = $skinned_npc->react[0];
-            $npc_web_data = $wowhead_handler->getWebData($skinned_npc->id, 'npc', $skinned_npc->name);
-            $cleaned_skinned_data = $wowhead_handler->getCleanedNpcData($npc_web_data);
-            if($cleaned_skinned_data == NULL){
-                continue;
-            }
-            $parsed_data = $wowhead_handler->parseData($cleaned_skinned_data);
-            $parsed_array[$parsed_data['index']]['values']['uiMapId'] = $parsed_data['values']['uiMapId'];
-            $parsed_array[$parsed_data['index']]['values']['uiMapName'] = $parsed_data['values']['uiMapName'];
-            $parsed_array[$parsed_data['index']]['values']['count'] = isset($parsed_array[$parsed_data['index']]['values']['count'])
-                                                                        ? $parsed_array[$parsed_data['index']]['values']['count'] + $parsed_data['values']['count']
-                                                                        : $parsed_data['values']['count'];
-            if($classification == 0){
-                if($reaction == -1){
-                    $parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'] = isset($parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'])
-                                                                                ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'], $parsed_data['values']['coords'])
-                                                                                : $parsed_data['values']['coords'];
-                }
-                else{
-                    $parsed_array[$parsed_data['index']]['values']['coords_normal'] = isset($parsed_array[$parsed_data['index']]['values']['coords_normal'])
-                                                                                ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_normal'], $parsed_data['values']['coords'])
-                                                                                : $parsed_data['values']['coords'];
-                }
-            }else{
-                $parsed_array[$parsed_data['index']]['values']['coords_elite'] = isset($parsed_array[$parsed_data['index']]['values']['coords_elite'])
-                                                                        ? $wowhead_handler->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_elite'], $parsed_data['values']['coords'])
-                                                                        : $parsed_data['values']['coords'];
-            }
-            unset($parsed_data);
-        }
+        $parsed_array = $wowhead_handler->getCoordsFromAllNpcToGetSkinned($skinned_data);
 
         return view("maps")->with('maps',$parsed_array);
     }

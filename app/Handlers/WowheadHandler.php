@@ -3,6 +3,7 @@
 namespace App\Handlers;
 
 use App\Models\Item;
+use App\Helpers\TextTransformHelper;
 use Exception as GlobalException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -15,7 +16,7 @@ class WowheadHandler
 
     public function getWebData($id = NULL, $type, $name = ''){
         try {
-            $url = $this->selectUrlType($type).$id.'/'.strtolower($this->customUrlEncode(str_replace(' ','-',$name)));
+            $url = $this->selectUrlType($type).$id.'/'.strtolower(TextTransformHelper::customUrlEncode(str_replace(' ','-',$name)));
             $data = Http::get($url);
             //file_put_contents('C:\temp\file.txt',json_encode($data->headers()).'\r\n', FILE_APPEND);
             if($data->status() == 200){
@@ -31,16 +32,7 @@ class WowheadHandler
 
     }
 
-    public function customUrlEncode($text){
-        $text = str_replace('ú','%C3%BA',$text);
-        $text = str_replace('á','%C3%A1',$text);
-        $text = str_replace('é','%C3%A9',$text);
-        $text = str_replace('í','%C3%AD',$text);
-        $text = str_replace('ó','%C3%B3',$text);
-        $text = str_replace('ñ','%C3%B1',$text);
 
-        return $text;
-    }
 
     public function selectUrlType($type){
         switch ($type) {
@@ -58,16 +50,16 @@ class WowheadHandler
     }
 
     public function getCleanedDroppedByData($data){
-        $dropped_by_data = $this->getDroppedByDataFromWebData($data);
-        $cleaned_data = $this->cleanData($dropped_by_data);
+        $dropped_by_data = TextTransformHelper::getDroppedByDataFromWebData($data);
+        $cleaned_data = TextTransformHelper::cleanData($dropped_by_data);
         $decoded_data = $this->jsonDataToArray($cleaned_data);
 
         return $decoded_data;
     }
 
     public function getCleanedSkinningByData($data){
-        $dropped_by_data = $this->getSkinnedDataFromWebData($data);
-        $cleaned_data = $this->cleanData($dropped_by_data);
+        $dropped_by_data = TextTransformHelper::getSkinnedDataFromWebData($data);
+        $cleaned_data = TextTransformHelper::cleanData($dropped_by_data);
         $decoded_data = $this->jsonDataToArray($cleaned_data);
 
         return $decoded_data;
@@ -111,13 +103,12 @@ class WowheadHandler
             echo __FUNCTION__;
             dd($coords_to_append);
         }
-
     }
 
     public function getNpcData($data){
         //span class="mapper-map"
         $pattern = "/g_mapperData = (.*)]};/isU";
-        $data = $this->decodeUnicodeString($data);
+        $data = TextTransformHelper::decodeUnicodeString($data);
         //file_put_contents('C:\temp\file.txt',$data);
         preg_match_all($pattern, trim(preg_replace('/\s\s+/', ' ', str_replace(array('\n','\t','\r'),'',$data))), $matches);
         if(!isset($matches[1][0])){
@@ -141,43 +132,42 @@ class WowheadHandler
         return $decoded_elements;
     }
 
-    public function cleanData($data){
-        $each_found = explode('},', $data);
-        foreach($each_found as $index => $each_dropped){
-            $each_found[$index] = $each_dropped.'}';
+    public function getCoordsFromAllNpcToGetSkinned($skinned_data){
+        foreach($skinned_data as $skinned_npc){
+            $name = $skinned_npc->name;
+            $id = $skinned_npc->id;
+            $classification = $skinned_npc->classification;
+            $reaction = $skinned_npc->react[0];
+            $npc_web_data = CacheHandler::npcWebCache($skinned_npc->id, $skinned_npc->name);
+            $cleaned_skinned_data = $this->getCleanedNpcData($npc_web_data);
+            if($cleaned_skinned_data == NULL){
+                continue;
+            }
+            $parsed_data = $this->parseData($cleaned_skinned_data);
+            $parsed_array[$parsed_data['index']]['values']['uiMapId'] = $parsed_data['values']['uiMapId'];
+            $parsed_array[$parsed_data['index']]['values']['uiMapName'] = $parsed_data['values']['uiMapName'];
+            $parsed_array[$parsed_data['index']]['values']['count'] = isset($parsed_array[$parsed_data['index']]['values']['count'])
+                                                                        ? $parsed_array[$parsed_data['index']]['values']['count'] + $parsed_data['values']['count']
+                                                                        : $parsed_data['values']['count'];
+            if($classification == 0){
+                if($reaction == -1){
+                    $parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'] = isset($parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'])
+                                                                                ? $this->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_normal_aggresive'], $parsed_data['values']['coords'])
+                                                                                : $parsed_data['values']['coords'];
+                }
+                else{
+                    $parsed_array[$parsed_data['index']]['values']['coords_normal'] = isset($parsed_array[$parsed_data['index']]['values']['coords_normal'])
+                                                                                ? $this->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_normal'], $parsed_data['values']['coords'])
+                                                                                : $parsed_data['values']['coords'];
+                }
+            }else{
+                $parsed_array[$parsed_data['index']]['values']['coords_elite'] = isset($parsed_array[$parsed_data['index']]['values']['coords_elite'])
+                                                                        ? $this->appendCoords($parsed_array[$parsed_data['index']]['values']['coords_elite'], $parsed_data['values']['coords'])
+                                                                        : $parsed_data['values']['coords'];
+            }
+            unset($parsed_data);
         }
-        return $each_found;
-    }
 
-    public function getDroppedByDataFromWebData($data){
-        $pattern = "/dropped-by(.*)data: \[(.*)}],(.*)\);/isU";
-        $data = $this->decodeUnicodeString($data);
-        //file_put_contents('C:\temp\file.txt',$data);
-        preg_match_all($pattern, trim(preg_replace('/\s\s+/', ' ', str_replace(array('\n','\t','\r'),'',$data))), $matches);
-        if(!isset($matches[2][0])){
-            return NULL;
-        }
-
-        return $matches[2][0];
-    }
-
-    public function getSkinnedDataFromWebData($data){
-        $pattern = "/skinned-from(.*)data: \[(.*)}],(.*)\);/isU";
-        $data = $this->decodeUnicodeString($data);
-        //file_put_contents('C:\temp\file.txt',$data);
-        preg_match_all($pattern, trim(preg_replace('/\s\s+/', ' ', str_replace(array('\n','\t','\r'),'',$data))), $matches);
-        if(!isset($matches[2][0])){
-            return NULL;
-        }
-
-        return $matches[2][0];
-    }
-
-    public function decodeUnicodeString($string){
-        $string = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function ($match) {
-            return mb_convert_encoding(pack('H*', $match[1]), 'UTF-8', 'UCS-2BE');
-        }, $string);
-
-        return $string;
+        return $parsed_array;
     }
 }
