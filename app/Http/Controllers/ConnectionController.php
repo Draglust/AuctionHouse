@@ -13,7 +13,6 @@ use App\Handlers\RecipeHandler as RecipeHandler;
 use App\Handlers\ReagentHandler as ReagentHandler;
 use App\Handlers\WowheadHandler as WowheadHandler;
 use App\Handlers\CacheHandler as CacheHandler;
-use Illuminate\Support\Facades\Cache;
 use Exception as GlobalException;
 use stdClass;
 
